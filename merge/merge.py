@@ -54,6 +54,8 @@
 import sys
 import xml.etree.ElementTree as ET
 
+print(sys.argv)
+
 def get_tracks_element(root):
     return root.find('LiveSet').find('Tracks')
 
@@ -84,9 +86,11 @@ def run(argv=None):
         # Ignore program name
         argv = sys.argv[1:]
 
-    if len(argv) < 3:
-        sys.stderr.write("Please input three files")
+    if len(argv) < 4:
+        sys.stderr.write("Please input three files and specify an output location")
         exit(-1)
+
+    output_filename = argv[3]
 
     base_filename = argv[0]
     ours_filename = argv[1]
@@ -175,7 +179,7 @@ def run(argv=None):
     print('tracks')
     print(list(tracks))
 
-    tree_out.write('output.xml', encoding='utf-8', xml_declaration=True)
+    tree_out.write(output_filename, encoding='utf-8', xml_declaration=True)
 
 
 
