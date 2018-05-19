@@ -46,6 +46,19 @@
         - Return track values on tracks merged in where the return track did not exist?
 
 
+
+    IDs that must be unique within a 'Track' all seem to be:
+        AutomationTarget
+        ModulationTarget
+        VolumeModulationTarget
+        TranspositionModulationTarget
+        GrainSizeModulationTarget
+        FluxModulationTarget
+        SampleOffsetModulationTarget
+
+
+
+
 '''
 
 
@@ -53,6 +66,16 @@
 
 import sys
 import xml.etree.ElementTree as ET
+
+COLLIDABLE_TAG = [
+        "AutomationTarget",
+        "ModulationTarget",
+        "VolumeModulationTarget",
+        "TranspositionModulationTarget",
+        "GrainSizeModulationTarget",
+        "FluxModulationTarget",
+        "SampleOffsetModulationTarget"
+]
 
 print(sys.argv)
 
@@ -80,6 +103,36 @@ def get_track_changes(base, branch):
             added.append(id_)
 
     return (added, removed)
+
+def amend_ids(root):
+    # Get all nodes with Id values that should not collide
+    nodes = get_nodes_with_collidable_ids(root, [])
+
+    # Find duplicate entries and assigned them next available id
+    taken_ids = []
+    duplicate_nodes = []
+    for node in nodes:
+        if node.attrib['Id'] not in taken_ids:
+            taken_ids.append(node.attrib['Id'])
+        else:
+            duplicate_nodes.append(node)
+            print(node.tag + " " + node.attrib['Id'] + "\n")
+    #print(duplicate_nodes)
+    
+    # Reassigned those with duplicates
+    id_ = max(list(map(lambda x: int(x), taken_ids))) + 1
+
+    for node in duplicate_nodes:
+        node.attrib['Id'] = str(id_)
+        id_ += 1
+
+def get_nodes_with_collidable_ids(node, nodes):
+    children = list(node)
+    if node.tag in COLLIDABLE_TAG:
+        nodes.append(node)
+    for child in children:
+        get_nodes_with_collidable_ids(child, nodes)
+    return nodes
 
 def run(argv=None):
     if not argv:
@@ -178,6 +231,10 @@ def run(argv=None):
 
     print('tracks')
     print(list(tracks))
+
+    root = tree_out.getroot()
+    amend_ids(root)
+
 
     tree_out.write(output_filename, encoding='utf-8', xml_declaration=True)
 
