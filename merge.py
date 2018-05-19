@@ -61,9 +61,6 @@
 
 '''
 
-
-
-
 import sys
 import xml.etree.ElementTree as ET
 
@@ -79,14 +76,22 @@ COLLIDABLE_TAG = [
 
 print(sys.argv)
 
+# Get the tracks element from Ableton Live XML (ALX)
 def get_tracks_element(root):
     return root.find('LiveSet').find('Tracks')
 
+# Get the track elements from ALX
+def get_tracks(root):
+    return list(get_tracks_element(root))
+
+# Get the track ids for all tracks in ALX
 def get_track_ids(root):
     return [id_ for id_ in [track.attrib['Id'] for track in list(get_tracks_element(root))]]
 
-
-def get_track_changes(base, branch):
+# Get ids of changed tracks in branch compared to base
+# 'added' tracks appear in branch and not in base
+# 'removed' tracks appear in base and not in branch
+def get_track_changes_ids(base, branch):
 
     base_track_ids = get_track_ids(base)
     branch_track_ids = get_track_ids(branch) 
@@ -104,6 +109,28 @@ def get_track_changes(base, branch):
 
     return (added, removed)
 
+# Gets track node of tracks that are in branch
+# that are not in base
+def get_added_tracks(base, branch):
+    base_tracks = get_tracks(base)
+    branch_tracks = get_tracks(branch)
+
+    base_track_ids = get_track_ids(base)
+
+    added = []
+    for node in branch_tracks:
+        if node.attrib['Id'] not in base_track_ids:
+            added.append(node)
+    return added
+
+
+# Gets track node of tracks that are in base
+# that are not in branch
+def get_removed_tracks(base, branch):
+    return get_added_tracks(branch, base)
+
+
+# Reassigns IDs to sensitive nodes if they share their ID with another node
 def amend_ids(root):
     # Get all nodes with Id values that should not collide
     nodes = get_nodes_with_collidable_ids(root, [])
@@ -126,6 +153,7 @@ def amend_ids(root):
         node.attrib['Id'] = str(id_)
         id_ += 1
 
+# Get list of nodes that are sensitive to collision
 def get_nodes_with_collidable_ids(node, nodes):
     children = list(node)
     if node.tag in COLLIDABLE_TAG:
@@ -161,8 +189,8 @@ def run(argv=None):
 
 
     base_tracks = get_track_ids(root_base)
-    our_new_tracks, our_removed_tracks = get_track_changes(root_base, root_ours)
-    their_new_tracks, their_removed_tracks = get_track_changes(root_base, root_theirs)
+    our_new_tracks, our_removed_tracks = get_track_changes_ids(root_base, root_ours)
+    their_new_tracks, their_removed_tracks = get_track_changes_ids(root_base, root_theirs)
 
     # Calculate collisions
     # ids that are in both ours and theirs but not in base are problematic
@@ -232,13 +260,14 @@ def run(argv=None):
     print('tracks')
     print(list(tracks))
 
+
+
+
     root = tree_out.getroot()
     amend_ids(root)
 
 
     tree_out.write(output_filename, encoding='utf-8', xml_declaration=True)
-
-
 
 
 if __name__ == '__main__':
