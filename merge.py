@@ -162,6 +162,9 @@ def get_nodes_with_collidable_ids(node, nodes):
         get_nodes_with_collidable_ids(child, nodes)
     return nodes
 
+def get_sends(track):
+    return track.find('DeviceChain').find('Mixer').find('Sends')
+
 def run(argv=None):
     if not argv:
         # Ignore program name
@@ -187,18 +190,51 @@ def run(argv=None):
     root_ours = tree_ours.getroot()
     root_theirs = tree_theirs.getroot()
 
+    # Get Tracks
+    base_tracks = get_tracks(root_base)
+    our_added_tracks = get_added_tracks(root_base, root_ours)
+    our_removed_tracks = get_removed_tracks(root_base, root_ours)
+    their_added_tracks = get_added_tracks(root_base, root_theirs)
+    their_removed_tracks = get_removed_tracks(root_base, root_theirs)
 
-    base_tracks = get_track_ids(root_base)
-    our_new_tracks, our_removed_tracks = get_track_changes_ids(root_base, root_ours)
-    their_new_tracks, their_removed_tracks = get_track_changes_ids(root_base, root_theirs)
+    # Get Return tracks
+    def get_return_tracks(tracks):
+        return [track for track in tracks if track.tag == 'ReturnTrack']
+
+    base_return_tracks = get_return_tracks(base_tracks)
+    our_added_return_tracks = get_return_tracks(our_added_tracks)
+    our_removed_return_tracks = get_return_tracks(our_removed_tracks)
+    their_added_return_tracks = get_return_tracks(their_added_tracks)
+    their_remove_return_tracks = get_return_tracks(their_removed_tracks)
+
+    # Get original send value on each track for each of the return tracks
+    # First from the base set of tracks
+    # Then ours, then theirs (choose?)
+
+    base_return_values = {}
+    base_track_id_to_return_values = {}
+    for track in base_tracks:
+        sends = get_sends(track)
+        send_holders = sends.findAll('TrackSendHolder')
+        # Sort based on Id which is the order that the return tracks appear
+        ordered_send_holders = sorted(send_holders, key=lambda x: int(x.attrib['Id']))
+
+        # Assumes ordering
+        send_values = [s.find('Send').find('Manual').attrib['Value'] for s in list(sends)]
+
+
+    # Get IDs
+    base_track_ids = get_track_ids(root_base)
+    our_new_track_ids, our_removed_track_ids = get_track_changes_ids(root_base, root_ours)
+    their_new_track_ids, their_removed_track_ids = get_track_changes_ids(root_base, root_theirs)
 
     # Calculate collisions
     # ids that are in both ours and theirs but not in base are problematic
     # there is no way that these could be intended to be the same track
-    collisions = list(set(our_new_tracks) & set(their_new_tracks))
+    collisions = list(set(our_new_track_ids) & set(their_new_track_ids))
     
     # Assign new ids to colliding 'their' tracks then add them into copy of base
-    taken_ids = list(set(base_tracks) | set(our_new_tracks) | set([id_ for id_ in their_new_tracks if id_ not in collisions]))
+    taken_ids = list(set(base_track_ids) | set(our_new_track_ids) | set([id_ for id_ in their_new_track_ids if id_ not in collisions]))
 
     # Id change to apply to theirs 
     mapping = {}
@@ -218,7 +254,7 @@ def run(argv=None):
     # Keep all for now - don't remove any unless removed in both ours and theirs
     tracks = get_tracks_element(root_out)
 
-    to_remove = list(set(our_removed_tracks) & set(their_removed_tracks))
+    to_remove = list(set(our_removed_track_ids) & set(their_removed_track_ids))
 
     for track in list(tracks):
         if track.attrib['Id'] in to_remove:
@@ -228,14 +264,14 @@ def run(argv=None):
     our_track_elems = get_tracks_element(root_ours) 
 
     for track in list(our_track_elems):
-        if track.attrib['Id'] in our_new_tracks:
+        if track.attrib['Id'] in our_new_track_ids:
             tracks.append(track)
 
     # Add new ones from theirs without collisions, and ones without collision
     their_track_elems = get_tracks_element(root_theirs)
     for track in list(their_track_elems):
         id_ = track.attrib['Id']
-        if id_ in their_new_tracks:
+        if id_ in their_new_track_ids:
             if id_ in mapping:
                 track.attrib['Id'] = str(mapping[id_])
             tracks.append(track)
