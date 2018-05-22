@@ -159,11 +159,11 @@ class Version():
         self.generate_sends()
         self.amend_global_id_collisions()
         tree = ET.ElementTree(self.tree)
-        tree.write(filename)
+        tree.write(filename, encoding='utf-8', xml_declaration=True)
 
     def _dump(self, filename):
         tree = ET.ElementTree(self.tree)
-        tree.write(filename)
+        tree.write(filename, encoding='utf-8', xml_declaration=True)
 
     def amend_global_id_collisions():
         pass
@@ -190,7 +190,7 @@ class Version():
             next_id += 1
 
     def generate_sends():
-        pass
+        pass 
 
     def return_track_count(self):
         return len([r for r in self.tracks if r.type == TrackType.RETURN])
