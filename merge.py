@@ -107,11 +107,13 @@ def run(argv=None):
     base_version.merge_with(our_version, their_version)
 
     # This is all done within write but doing separately for debugging
-    base_version.move_return_tracks_to_end()
-    base_version.reconcile_send_values()
-    base_version.amend_track_collisions()
+    #base_version.move_return_tracks_to_end()
+    #base_version.reconcile_send_values()
+    #base_version.amend_track_collisions()
+    #base_version.generate_sends()
+    #base_version.amend_global_id_collisions()
 
-    base_version._dump(output_filename)
+    base_version.write(output_filename)
 
 
 if __name__ == '__main__':

@@ -22,6 +22,16 @@ TRACK_SEND_HOLDER = """
         </TrackSendHolder>
                     """
 
+COLLIDABLE_TAG = [
+        "AutomationTarget",
+        "ModulationTarget",
+        "VolumeModulationTarget",
+        "TranspositionModulationTarget",
+        "GrainSizeModulationTarget",
+        "FluxModulationTarget",
+        "SampleOffsetModulationTarget"
+]
+
 class Version():
     
     def __init__(self, tree):
@@ -111,6 +121,8 @@ class Version():
     # All tracks must be added before calling
     #
     # Does not mutate ETree
+    # 
+    # Doesn't work properly
     def reconcile_send_values(self):
         # Get all return tracks
         return_tracks = [r for r in self.tracks if r.type == TrackType.RETURN]
@@ -165,8 +177,31 @@ class Version():
         tree = ET.ElementTree(self.tree)
         tree.write(filename, encoding='utf-8', xml_declaration=True)
 
-    def amend_global_id_collisions():
-        pass
+    # Visit every node in the tree and document its ID
+    # If a duplicate ID is present, reassigned new ids
+    def amend_global_id_collisions(self):
+        # COLLIDABLE_TAG
+        used_ids = []
+        duplicate_nodes = []
+        
+        def check_ids(node):
+            if node.tag in COLLIDABLE_TAG:
+                id_ = int(node.attrib['Id'])
+                if id_ in used_ids:
+                    duplicate_nodes.append(node)
+                else:
+                    used_ids.append(id_)
+            for c in list(node):
+                check_ids(c)
+
+        check_ids(self.tree)
+        print(len(duplicate_nodes))
+
+        new_id = max(used_ids)
+        for node in duplicate_nodes:
+            new_id += 1
+            node.attrib['Id'] = str(new_id)
+
 
     def amend_track_collisions(self):
         track_ids = [t.track_id for t in self.tracks]
@@ -189,8 +224,26 @@ class Version():
             t.set_track_id(next_id)
             next_id += 1
 
-    def generate_sends():
-        pass 
+    def generate_sends(self):
+        tracks = self.tracks
+        returns = [t for t in tracks if t.type == TrackType.RETURN]
+        
+        # Remove current sends
+        for track in tracks:
+            print(track.final_ordered_mapping)
+            track_sends = track.elem.find('DeviceChain').find('Mixer').find('Sends')
+            old_sends = [sh for sh in track_sends]
+            for sh in old_sends:
+                track_sends.remove(sh)
+
+        for track in tracks:
+            track_sends = track.elem.find('DeviceChain').find('Mixer').find('Sends')
+            for i, rt in enumerate(returns):
+                sh_elem = ET.fromstring(TRACK_SEND_HOLDER)
+                sh_elem.attrib['Id'] = str(i)
+                sh_elem.find('Send').find('Manual').attrib['Value'] = str(track.final_ordered_mapping[i])
+                track_sends.append(sh_elem)
+                
 
     def return_track_count(self):
         return len([r for r in self.tracks if r.type == TrackType.RETURN])
