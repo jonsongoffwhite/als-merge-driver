@@ -36,11 +36,43 @@ class Version():
         # Set a mapping from track object to value in each track,
         # rather than the return track index
         num_tracks = len(ordered_return_tracks)
-        for track in tracks:
+        for track in self.tracks:
             mapping = {}
-            for index, value in track.preliminary_return_map:
+            for index in track.preliminary_return_map:
+                value = track.preliminary_return_map[index]
                 mapping[ordered_return_tracks[index]] = value    
             track.set_return_map(mapping)
+
+    def merge_with(self, ours, theirs):
+        our_added = ours.get_added_tracks_compared_to(self)
+        their_added = theirs.get_added_tracks_compared_to(self)
+
+        our_removed = ours.get_removed_tracks_compared_to(self)
+        their_removed = theirs.get_removed_tracks_compared_to(self)
+
+        
+        # Any removed from both
+        our_removed_ids = [t.track_id for t in our_removed]
+        their_removed_ids = [t.track_id for t in their_removed]
+        both_removed_ids = [t for t in our_removed_ids if t in their_removed_ids]
+        
+        # Remove the tracks from self
+        both_removed = [t for t in self.tracks if t.track_id in both_removed_ids]
+        self.tracks = [t for t in self.tracks if t.track_id not in both_removed_ids]   
+         
+        for t in both_removed:
+            # NOTE: This might not work if merging multiple times as the elements
+            # will have changed after reconcilliation
+            self.tree.find('LiveSet').find('Tracks').remove(t.elem)
+
+
+        for track in our_added:
+            self.add_track(track)
+
+        for track in their_added:
+            self.add_track(track)
+
+
 
 
     # Returns a list of tracks included in this version that are not included
@@ -49,7 +81,7 @@ class Version():
     def get_added_tracks_compared_to(self, version):
         their_tracks = version.tracks
         their_track_ids = [t.track_id for t in their_tracks]
-        return [t for t in self.tracks if track.track_id not in their_track_ids]
+        return [t for t in self.tracks if t.track_id not in their_track_ids]
 
     # Inversion of added tracks - added tracks relative to provided version
     def get_removed_tracks_compared_to(self, version):
@@ -77,14 +109,15 @@ class Version():
     # using the mappings in each of the tracks
     #
     # All tracks must be added before calling
+    #
+    # Does not mutate ETree
     def reconcile_send_values(self):
         # Get all return tracks
         return_tracks = [r for r in self.tracks if r.type == TrackType.RETURN]
 
-        # Make sure they are all at the end?
-
         # Put correct sends for each return track,
         # adding them if they do not exist
+        # in track.final_ordered_mapping
         for track in self.tracks:
             new_mapping = {}
             for rt in return_tracks:
@@ -100,15 +133,37 @@ class Version():
                 track.final_ordered_mapping.append(new_mapping[rt])
 
 
+    def move_return_tracks_to_end(self):
+        tracks_copy = []
+        return_tracks = []
+        for track in self.tracks:
+            if track.type == TrackType.RETURN:
+                return_tracks.append(track)
+            else:
+                tracks_copy.append(track)
+        self.tracks = tracks_copy + return_tracks
+
+            
+        for track in return_tracks:
+            self.tree.find('LiveSet').find('Tracks').remove(track.elem)
+            self.tree.find('LiveSet').find('Tracks').append(track.elem)
+
+
+
     # Check and amend collisions in IDs before writing
     # Make sure return tracks all at end?
     def write(self, filename):
+        self.move_return_tracks_to_end()
         self.reconcile_send_values()
         self.amend_track_collisions()
         self.generate_sends()
         self.amend_global_id_collisions()
-        self.tree.write(filename)
-        pass
+        tree = ET.ElementTree(self.tree)
+        tree.write(filename)
+
+    def _dump(self, filename):
+        tree = ET.ElementTree(self.tree)
+        tree.write(filename)
 
     def amend_global_id_collisions():
         pass
@@ -121,7 +176,7 @@ class Version():
         
         # Gather the tracks that need their IDs changed
         used_ids = []
-        collided_tracks
+        collided_tracks = [] 
         for track in self.tracks:
             if track.track_id not in used_ids:
                 used_ids.append(track.track_id)
@@ -145,7 +200,7 @@ class Version():
 
 class Track():
 
-    def __init__(elem):
+    def __init__(self, elem):
         # The ElementTree track node
         self.elem = elem
 
@@ -171,12 +226,12 @@ class Track():
             self.type = TrackType.RETURN
 
     # Issues with references?
-    def set_track_id(new_id):
+    def set_track_id(self, new_id):
         self.track_id = new_id
         self.elem.attrib['Id'] = str(new_id)
 
     # mapping of return track objects to values
-    def set_return_map(mapping):
+    def set_return_map(self, mapping):
         self.return_map = mapping
 
 
