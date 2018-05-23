@@ -51,7 +51,7 @@ class Version():
             mapping = {}
             for index in track.preliminary_return_map:
                 value = track.preliminary_return_map[index]
-                mapping[ordered_return_tracks[index]] = value    
+                mapping[ordered_return_tracks[index].track_id] = value    
             track.set_return_map(mapping)
 
     def merge_with(self, ours, theirs):
@@ -135,15 +135,19 @@ class Version():
             new_mapping = {}
             for rt in return_tracks:
                 try:
-                    value = track.return_map[rt]
-                    new_mapping[rt] = value
+                    value = track.return_map[rt.track_id]
+                    new_mapping[rt.track_id] = value
+                    print('found existing send')
+                    print(value)
                 except KeyError:
                     # create a new entry with default
-                    new_mapping[rt] = 0
+                    new_mapping[rt.track_id] = 0
+                    print('create zero send')
             #track.return_map = new_mapping
             track.final_ordered_mapping = [] 
             for rt in return_tracks:
-                track.final_ordered_mapping.append(new_mapping[rt])
+                print(new_mapping)
+                track.final_ordered_mapping.append(new_mapping[rt.track_id])
 
 
     def move_return_tracks_to_end(self):
@@ -286,6 +290,7 @@ class Track():
             int(send.attrib['Id']): float(send.find('Send').find('Manual').attrib['Value'])
                 for send in sends
         }
+        print(self.preliminary_return_map)
         self.return_map = None
 
         # The type of track
