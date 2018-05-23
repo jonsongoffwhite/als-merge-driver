@@ -2,7 +2,6 @@ import xml.etree.ElementTree as ET
 from enum import Enum
 
 TRACK_SEND_HOLDER = """
-
         <TrackSendHolder Id="0">
                 <Send>
                         <LomId Value="0" />
@@ -20,7 +19,9 @@ TRACK_SEND_HOLDER = """
                 </Send>
                 <Active Value="true" />
         </TrackSendHolder>
-                    """
+"""
+
+#TRACK_SEND_HOLDER = """<TrackSendHolder Id="0"><Send><LomId Value="0" /><Manual Value="0.0003162277571" /><MidiControllerRange><Min Value="0.0003162277571" /><Max Value="1" /></MidiControllerRange><AutomationTarget Id="8631"><LockEnvelope Value="0" /></AutomationTarget><ModulationTarget Id="8632"><LockEnvelope Value="0" /></ModulationTarget></Send><Active Value="true" /></TrackSendHolder>"""
 
 COLLIDABLE_TAG = [
         "AutomationTarget",
@@ -170,12 +171,25 @@ class Version():
         self.amend_track_collisions()
         self.generate_sends()
         self.amend_global_id_collisions()
+        self.amend_sends_pre()
         tree = ET.ElementTree(self.tree)
         tree.write(filename, encoding='utf-8', xml_declaration=True)
 
     def _dump(self, filename):
         tree = ET.ElementTree(self.tree)
         tree.write(filename, encoding='utf-8', xml_declaration=True)
+
+    def amend_sends_pre(self):
+        return_tracks = [t for t in self.tracks if t.type == TrackType.RETURN]
+        return_tracks_count = len(return_tracks)
+        sp_str = """<SendPreBool Id="3" Value="false" />"""
+        sp = self.tree.find('LiveSet').find('SendsPre')
+        curr_count = len(list(sp))
+        for i in range(curr_count, return_tracks_count):
+            elem = ET.fromstring(sp_str)
+            elem.attrib['Id'] = str(i)
+            sp.append(elem)
+
 
     # Visit every node in the tree and document its ID
     # If a duplicate ID is present, reassigned new ids
@@ -239,8 +253,12 @@ class Version():
         for track in tracks:
             track_sends = track.elem.find('DeviceChain').find('Mixer').find('Sends')
             for i, rt in enumerate(returns):
-                sh_elem = ET.fromstring(TRACK_SEND_HOLDER)
+                sh_elem = ET.fromstring(TRACK_SEND_HOLDER.strip())
                 sh_elem.attrib['Id'] = str(i)
+                # de activate sends if track is a return track
+                # if track.type == TrackType.RETURN:
+                #    print("deactivating send for return track")
+                #    sh_elem.find('Active').attrib['Value'] = "false"
                 sh_elem.find('Send').find('Manual').attrib['Value'] = str(track.final_ordered_mapping[i])
                 track_sends.append(sh_elem)
                 
