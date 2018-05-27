@@ -6,6 +6,13 @@ IGNORE_ATTRIB_FOR = {
     'IsArmed': ['Value'],
     'RelativePathElement': ['Id'],
     'FileRef': ['Id'],
+    'SelectedDevice': ['Value'],
+    'SelectedEnvelope': ['Value'],
+    'LastSelectedTimeableIndex': ['Value'],
+    'LastSelectedClipEnvelopeIndex': ['Value'],
+    'VstPreset': ['Id'],
+
+    
 }
 
 IGNORE_ALWAYS = {
