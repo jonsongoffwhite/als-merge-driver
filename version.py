@@ -55,13 +55,14 @@ class Version():
             track.set_return_map(mapping)
 
     def merge_with(self, ours, theirs):
+
         our_added = ours.get_added_tracks_compared_to(self)
         their_added = theirs.get_added_tracks_compared_to(self)
 
         our_removed = ours.get_removed_tracks_compared_to(self)
         their_removed = theirs.get_removed_tracks_compared_to(self)
 
-        
+       
         # Any removed from both
         our_removed_ids = [t.track_id for t in our_removed]
         their_removed_ids = [t.track_id for t in their_removed]
@@ -83,6 +84,49 @@ class Version():
         for track in their_added:
             self.add_track(track)
 
+        self.move_return_tracks_to_end()
+        self.reconcile_send_values()
+
+        # Get all of the return value mappings for each track in each version
+        # Added can be ignored because they won't have any conflicting sends (they are new)
+        # As can removed
+        # Only care about maintained?
+        # We have track.return_map at this point for ours and theirs
+        our_same = ours.get_intersection_tracks_compared_to(self)
+        their_same = theirs.get_intersection_tracks_compared_to(self)
+
+        # Need to establish whether to favour ours or theirs, or base?
+        # Offer a choice?
+        for track in our_same:
+            # Get corresponding base track that is same
+            # We can guarantee that the array below will be 1 long 
+            base_track = [t for t in self.tracks if t.track_id == track.track_id][0]
+            # What to do about new entries?
+            # What if a return track that we are about to query by its ID has been deleted?
+            our_mapping = track.return_map
+            base_mapping = base_track.return_map
+            for key in base_mapping:
+                if key in our_mapping:
+                    our_value = our_mapping[key]
+                    current_value = base_mapping[key]
+                    if current_value != our_value:
+                        # Just overwrite it for now
+                        print("overwriting value")
+                        print("was: " + str(current_value))
+                        print("now: " + str(our_value))
+                        base_mapping[key] = our_value
+        
+ 
+        
+
+
+        # reconcile again to account for changed values
+        self.reconcile_send_values()
+
+        self.amend_track_collisions()
+        self.generate_sends()
+        self.amend_global_id_collisions()
+        self.amend_sends_pre()
 
 
 
@@ -97,6 +141,11 @@ class Version():
     # Inversion of added tracks - added tracks relative to provided version
     def get_removed_tracks_compared_to(self, version):
         return version.get_added_tracks_compared_to(self)
+
+    def get_intersection_tracks_compared_to(self, version):
+        their_tracks = version.tracks
+        their_track_ids = [t.track_id for t in their_tracks]
+        return [t for t in self.tracks if t.track_id in their_track_ids]
 
     def add_track(self, track):
         if track.type == TrackType.RETURN:
@@ -170,12 +219,6 @@ class Version():
     # Check and amend collisions in IDs before writing
     # Make sure return tracks all at end?
     def write(self, filename):
-        self.move_return_tracks_to_end()
-        self.reconcile_send_values()
-        self.amend_track_collisions()
-        self.generate_sends()
-        self.amend_global_id_collisions()
-        self.amend_sends_pre()
         tree = ET.ElementTree(self.tree)
         tree.write(filename, encoding='utf-8', xml_declaration=True)
 
@@ -254,6 +297,7 @@ class Version():
             for sh in old_sends:
                 track_sends.remove(sh)
 
+        # Add new sends
         for track in tracks:
             track_sends = track.elem.find('DeviceChain').find('Mixer').find('Sends')
             for i, rt in enumerate(returns):
