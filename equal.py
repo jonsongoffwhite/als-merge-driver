@@ -11,14 +11,14 @@ IGNORE_ATTRIB_FOR = {
     'LastSelectedTimeableIndex': ['Value'],
     'LastSelectedClipEnvelopeIndex': ['Value'],
     'VstPreset': ['Id'],
-
-    
+    'TrackSendHolder': ['Id'],
+    'AutomationTarget': ['Id'],
 }
 
 IGNORE_ALWAYS = {
 }
 
-def tree_equal(e1, e2):
+def tree_equal(e1, e2, send_map):
     """
     Calculates deep equality of two ElementTree Elements,
     leaving out unimportant circumstantial values such as
@@ -75,5 +75,35 @@ def tree_equal(e1, e2):
         print(e2)
         print(str(len(e1)) + ' != ' + str(len(e2)))
         return False
-    return all(tree_equal(c1, c2) for c1, c2 in zip(e1, e2))
+
+    # For send tracks, we only care about the intersection of the two track's send tracks
+    # Ones that have been added on the track from branch will not be in base
+    # Ones that have been removed no longer matter
+    # These can be different as it is the set of return tracks that differ, when the track could
+    # actually be no different
+    # The IDs of the elements in Sends are not IDs of the tracks, they are only an ordering,
+    # therefore currently we must also pass the return tracks into this function so that we
+    # can calculate which sends actually intersect
+    if e1.tag == 'Sends':
+        if not e2.tag == 'Sends':
+            return False
+        relevant_send_results = []
+        for ba_loc in send_map:
+            br_loc = send_map[ba_loc]
+            relevant_send_results.append(
+                tree_equal(
+                    get_elem_attr_value(e1, 'TrackSendHolder', 'Id', str(br_loc)), 
+                    get_elem_attr_value(e2, 'TrackSendHolder', 'Id', str(ba_loc)),
+                    send_map
+                )
+            )
+        return all(relevant_send_results)
+
+    return all(tree_equal(c1, c2, send_map) for c1, c2 in zip(e1, e2))
     
+def get_elem_attr_value(elem, name, attrib, value):
+    elems = elem.findall(name)
+    for e in elems:
+        if e.attrib[attrib] == value:
+            return e
+

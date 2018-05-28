@@ -55,6 +55,13 @@ class Version():
                 mapping[ordered_return_tracks[index].track_id] = value    
             track.set_return_map(mapping)
 
+    def get_return_tracks(self):
+        return_tracks = []
+        for track in self.tracks:
+            if track.type == TrackType.RETURN:
+                return_tracks.append(track)
+        return return_tracks
+
     def merge_with(self, ours, theirs):
 
         our_added = ours.get_added_tracks_compared_to(self)
@@ -95,11 +102,29 @@ class Version():
         their_same = theirs.get_intersection_tracks_compared_to(self)
 
         
-        def get_updated_tracks(base_tracks, branch_tracks):
+        def get_updated_tracks(branch, branch_same_tracks, base):
+            base_tracks = base.tracks
             updated_tracks = []
-            for track in branch_tracks:
+            for track in branch_same_tracks:
                 original_track = [t for t in base_tracks if t.track_id == track.track_id][0]
-                if not tree_equal(track.elem, original_track.elem):
+                # Create mapping of returns
+                # See note in equal.py for why this is necessary
+                branch_return = branch.get_return_tracks()
+                base_return = base.get_return_tracks()
+                return_intersection_ids = [t.track_id for t in branch_return if t.track_id in [b.track_id for b in base_return]]
+                # Get send ID mapping of these tracks to eachother
+                # Their send id is based on their ordering 
+                # The key will be the base send ID
+                # The value will be that send's ID in the branch track
+                send_map = {}
+                branch_r_ids = [t.track_id for t in branch_return]
+                base_r_ids = [t.track_id for t in base_return]
+                for i in return_intersection_ids:
+                    br_loc = branch_r_ids.index(i)
+                    ba_loc = base_r_ids.index(i)
+                    send_map[ba_loc] = br_loc
+
+                if not tree_equal(track.elem, original_track.elem, send_map):
                     updated_tracks.append(track)
                     print('not equal')
                     print(track.elem)
@@ -110,8 +135,8 @@ class Version():
 
 
         # Can guarantee only one track in array
-        updated_in_ours = get_updated_tracks(self.tracks, our_same)
-        updated_in_theirs = get_updated_tracks(self.tracks, their_same)
+        updated_in_ours = get_updated_tracks(ours, our_same, self)
+        updated_in_theirs = get_updated_tracks(theirs, their_same, self)
 
         # Intersection of both of these
         conflicting_tracks = [t for t in updated_in_ours if t.track_id in [h.track_id for h in updated_in_theirs]]
