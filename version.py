@@ -1,6 +1,10 @@
 import xml.etree.ElementTree as ET
 from enum import Enum
 from equal import tree_equal
+from conflict import Conflict
+import os
+import webbrowser 
+import gzip
 
 TRACK_SEND_HOLDER = """
         <TrackSendHolder Id="0">
@@ -61,6 +65,11 @@ class Version():
             if track.type == TrackType.RETURN:
                 return_tracks.append(track)
         return return_tracks
+
+    def get_track_with_id(self, id_):
+        for track in self.tracks:
+            if track.track_id == id_:
+                return track
 
     def merge_with(self, ours, theirs):
 
@@ -139,53 +148,85 @@ class Version():
         updated_in_theirs = get_updated_tracks(theirs, their_same, self)
 
         # Intersection of both of these
-        conflicting_tracks = [t for t in updated_in_ours if t.track_id in [h.track_id for h in updated_in_theirs]]
-        print([t.elem for t in conflicting_tracks])
+        conflicting_track_ids = [t.track_id for t in updated_in_ours if t.track_id in [h.track_id for h in updated_in_theirs]]
+        print([t for t in conflicting_track_ids])
+        conflicts = [Conflict(*map(lambda x: ET.tostring(x.get_track_with_id(id_).elem).decode() , [self, ours, theirs])) for id_ in conflicting_track_ids] 
 
-        updates = [t for t in updated_in_ours if t.track_id not in conflicting_tracks]
-        updates += [t for t in updated_in_theirs if t.track_id not in conflicting_tracks]
+        print(conflicts)
+        updates = [t for t in updated_in_ours if t.track_id not in conflicting_track_ids]
+        updates += [t for t in updated_in_theirs if t.track_id not in conflicting_track_ids]
                     
         for track in updates:
             print("REPLACING")
             self.replace_track(track)
 
         
+        # Await conflicts here
+        # need to make barebones files
+        # notify macOS app using webbrowser
+        # await file creation of some variety
+        # if it's a normal track, get both versions leave returns? which returns?
+        # if it's a return track, get a track as well that uses
+        # it
+        if len(conflicts) > 0:
+            conflict_files = []
+            for i, conf in enumerate(conflicts):
+                sample_root = ET.parse('blank.xml').getroot()
+                sample_tracks = sample_root.find('LiveSet').find('Tracks')
+                for c in list(sample_tracks):
+                    sample_tracks.remove(c)
+                sample_ours = ET.fromstring(conf.ours)
+                sample_ours.attrib['Id'] = "10"
+                sample_ours.find('Name').find('UserName').attrib['Value'] = 'Ours'
 
-#        # Need to establish whether to favour ours or theirs, or base?
-#        # Offer a choice?
-#        # If they both edit same one, create Conflict()
-#        for track in our_same:
-#            # Get corresponding base track that is same
-#            # We can guarantee that the array below will be 1 long 
-#            base_track = [t for t in self.tracks if t.track_id == track.track_id][0]
-#            # What to do about new entries?
-#            # What if a return track that we are about to query by its ID has been deleted?
-#            our_mapping = track.return_map
-#            base_mapping = base_track.return_map
-#            for key in base_mapping:
-#                if key in our_mapping:
-#                    our_value = our_mapping[key]
-#                    current_value = base_mapping[key]
-#                    if current_value != our_value:
-#                        # Just overwrite it for now
-#                        base_mapping[key] = our_value
-#        
-# 
-#        
-#
-#
-#        # reconcile again to account for changed values
-#        self.reconcile_send_values()
-#
+                sample_theirs = ET.fromstring(conf.theirs)
+                sample_theirs.attrib['Id'] = "20"
+                sample_theirs.find('Name').find('UserName').attrib['Value'] = 'Theirs'
+                # Remove send values
+                sample_ours_sends = sample_ours.find('DeviceChain').find('Mixer').find('Sends')
+                sample_theirs_sends = sample_theirs.find('DeviceChain').find('Mixer').find('Sends')
+
+                for c in list(sample_ours_sends):
+                    sample_ours_sends.remove(c)
+                for c in list(sample_theirs_sends):
+                    sample_theirs_sends.remove(c)
+                print(sample_ours)
+                print(sample_theirs)
+
+                sample_tracks.append(sample_ours)
+                sample_tracks.append(sample_theirs)
+                sample_tree = ET.ElementTree(sample_root)
+
+                temp_folder_name = '.conftemp'
+                if not os.path.exists(temp_folder_name):
+                    os.makedirs(temp_folder_name)
+
+                filename = 'conf_' + str(i) + '.xml'
+                full_path = temp_folder_name + '/' + filename
+                full_als_path = temp_folder_name + '/' + 'conf_' + str(i) + '.als'
+
+                sample_tree.write(full_path, encoding='utf-8', xml_declaration=True)
+                with open(full_path, 'rb') as f_in, gzip.open(full_als_path, 'wb') as f_out:
+                    f_out.writelines(f_in)
+                conflict_files.append(full_als_path)
+
+            url_scheme = 'jackdaw://merge/'
+            for cpath in conflict_files:
+                url_scheme += cpath + '+'
+            url_scheme = url_scheme[:-1]
+            print(url_scheme)
+            webbrowser.open(url_scheme)
+
+                
+
+
+
+
+        
         self.move_return_tracks_to_end()
         self.reconcile_send_values()
 
         self.amend_track_collisions()
-
-        # Get shared tracks and find out whether they've been changed
-
-
-
 
         self.generate_sends()
         self.amend_global_id_collisions()
