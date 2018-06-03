@@ -173,7 +173,7 @@ class Version():
         if len(conflicts) > 0:
             conflict_files = []
             for i, conf in enumerate(conflicts):
-                sample_root = ET.parse('blank.xml').getroot()
+                sample_root = ET.parse('.merge/blank.xml').getroot()
                 sample_tracks = sample_root.find('LiveSet').find('Tracks')
                 for c in list(sample_tracks):
                     sample_tracks.remove(c)
