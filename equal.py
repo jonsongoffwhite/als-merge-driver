@@ -42,7 +42,7 @@ def tree_equal(e1, e2, send_map):
         print('text')
         print(e1)
         print(e2)
-        print(e1.text + ' != ' + e2.text)
+        print(str(e1.text) + ' != ' + str(e2.text))
         return False
     if e1.tail != e2.tail:
         print('tail')
