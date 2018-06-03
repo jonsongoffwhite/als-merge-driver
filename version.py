@@ -219,6 +219,11 @@ class Version():
             print(url_scheme)
             webbrowser.open(url_scheme)
 
+            import time
+            while not os.path.exists('.merge/done'):
+                time.sleep(1)
+                
+
                 
 
 
