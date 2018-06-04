@@ -220,8 +220,31 @@ class Version():
             webbrowser.open(url_scheme)
 
             import time
-            while not os.path.exists('.merge/done'):
+            done_file = '.merge/done'
+            while not os.path.exists(done_file):
                 time.sleep(1)
+
+            resolutions = []
+
+            # Eventually make this so that it reloads from
+            # the actual als file so that user edits are saved
+            with open(done_file) as json_data:
+                conf_branch_map = json.load(json_data)
+                for conf, branch in conf_branch_map:
+                    print (conf)
+                    conf_i = conflict_files.index(conf)
+                    conflict = conflicts[conf_i]
+                    if branch:
+                        resolutions.append(ours)
+                    else:
+                        resolutions.append(theirs)
+            
+            for i, track_id in conflicting_track_ids:
+                chosen_branch = resolutions[i]
+                to_replace_with = chosen_branch.get_track_with_id(track_id)
+                self.replace_track(to_replace_with)
+                    
+
                 
 
                 
