@@ -233,7 +233,8 @@ class Version():
                 conf_branch_map = json.load(json_data)
                 for conf, branch in conf_branch_map.items():
                     print (conf)
-                    conf_i = conflict_files.index('.merge/'+conf)
+                    print(conflict_files)
+                    conf_i = conflict_files.index('.conftemp/'+conf)
                     conflict = conflicts[conf_i]
                     if branch:
                         resolutions.append(ours)
