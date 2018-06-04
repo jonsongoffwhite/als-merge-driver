@@ -7,6 +7,7 @@ from conflict import Conflict
 import os
 import webbrowser 
 import gzip
+import json
 
 TRACK_SEND_HOLDER = """
         <TrackSendHolder Id="0">
@@ -230,16 +231,16 @@ class Version():
             # the actual als file so that user edits are saved
             with open(done_file) as json_data:
                 conf_branch_map = json.load(json_data)
-                for conf, branch in conf_branch_map:
+                for conf, branch in conf_branch_map.items():
                     print (conf)
-                    conf_i = conflict_files.index(conf)
+                    conf_i = conflict_files.index('.merge/'+conf)
                     conflict = conflicts[conf_i]
                     if branch:
                         resolutions.append(ours)
                     else:
                         resolutions.append(theirs)
             
-            for i, track_id in conflicting_track_ids:
+            for i, track_id in enumerate(conflicting_track_ids):
                 chosen_branch = resolutions[i]
                 to_replace_with = chosen_branch.get_track_with_id(track_id)
                 self.replace_track(to_replace_with)
