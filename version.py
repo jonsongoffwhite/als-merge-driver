@@ -164,6 +164,8 @@ class Version():
             self.replace_track(track)
 
         
+        ours.reconcile_send_values()
+        theirs.reconcile_send_values()
         # Await conflicts here
         # need to make barebones files
         # notify macOS app using webbrowser
@@ -174,45 +176,57 @@ class Version():
         if len(conflicts) > 0:
             conflict_files = []
             for i, conf in enumerate(conflicts):
+                # Create a new project from blank.xml to hold the sample project for viewing the conflicts
                 sample_root = ET.parse('.merge/blank.xml').getroot()
+
+                # Remove any residual tracks from the blank file's tracks
                 sample_tracks = sample_root.find('LiveSet').find('Tracks')
                 for c in list(sample_tracks):
                     sample_tracks.remove(c)
+
+                # Add our branch to sample
                 sample_ours = ET.fromstring(conf.ours)
                 sample_ours.attrib['Id'] = "10"
                 sample_ours.find('Name').find('UserName').attrib['Value'] = 'Ours'
 
+                # Add their branch to sample
                 sample_theirs = ET.fromstring(conf.theirs)
                 sample_theirs.attrib['Id'] = "20"
                 sample_theirs.find('Name').find('UserName').attrib['Value'] = 'Theirs'
+
                 # Remove send values
                 sample_ours_sends = sample_ours.find('DeviceChain').find('Mixer').find('Sends')
                 sample_theirs_sends = sample_theirs.find('DeviceChain').find('Mixer').find('Sends')
-
                 for c in list(sample_ours_sends):
                     sample_ours_sends.remove(c)
                 for c in list(sample_theirs_sends):
                     sample_theirs_sends.remove(c)
-                print(sample_ours)
-                print(sample_theirs)
 
+                # Add our tracks to the sample
                 sample_tracks.append(sample_ours)
                 sample_tracks.append(sample_theirs)
                 sample_tree = ET.ElementTree(sample_root)
 
+                # Create a temporary folder to hold the samples
                 temp_folder_name = '.conftemp'
                 if not os.path.exists(temp_folder_name):
                     os.makedirs(temp_folder_name)
 
+                # Create the sample file path
                 filename = 'conf_' + str(i) + '.xml'
                 full_path = temp_folder_name + '/' + filename
                 full_als_path = temp_folder_name + '/' + 'conf_' + str(i) + '.als'
 
+                # Write the samples to the folder
                 sample_tree.write(full_path, encoding='utf-8', xml_declaration=True)
                 with open(full_path, 'rb') as f_in, gzip.open(full_als_path, 'wb') as f_out:
                     f_out.writelines(f_in)
+
+                # Add the file path to the list of sample file paths
                 conflict_files.append(full_als_path)
 
+            # Make a call to the url scheme for the jackdaw app
+            # appending the paths of the sample files
             url_scheme = 'jackdaw://merge/'
             for cpath in conflict_files:
                 url_scheme += cpath + '+'
@@ -220,6 +234,8 @@ class Version():
             print(url_scheme)
             webbrowser.open(url_scheme)
 
+            # Wait until the resolution file is present
+            # created by the jackdaw app
             import time
             done_file = '.merge/done'
             while not os.path.exists(done_file):
@@ -229,21 +245,31 @@ class Version():
 
             # Eventually make this so that it reloads from
             # the actual als file so that user edits are saved
+
+            # Open the resolution file
             with open(done_file) as json_data:
+                # Load the contents of the file into json
                 conf_branch_map = json.load(json_data)
                 for conf, branch in conf_branch_map.items():
+                    # For each path: true/false ours/theirs
                     print (conf)
                     print(conflict_files)
+                    # Get the index of the resolution from the original list of files
                     conf_i = conflict_files.index('.conftemp/'+conf)
+                    # Get the Conflict object for this version 
                     conflict = conflicts[conf_i]
                     if branch:
                         resolutions.append(ours)
                     else:
                         resolutions.append(theirs)
-            
+             
+
             for i, track_id in enumerate(conflicting_track_ids):
+                # Get the chosen version
                 chosen_branch = resolutions[i]
+                # Get the track from the chosen branch with the selected ID
                 to_replace_with = chosen_branch.get_track_with_id(track_id)
+                # Replace the track with that ID
                 self.replace_track(to_replace_with)
                     
 
