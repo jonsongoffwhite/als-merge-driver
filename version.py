@@ -273,7 +273,9 @@ class Version():
                 self.replace_track(to_replace_with)
                     
 
-                
+            os.remove('.merge/done')
+            import shutil
+            shutil.rmtree('.conftemp')
 
                 
 
