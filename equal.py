@@ -32,11 +32,16 @@ def tree_equal(e1, e2, send_map):
     Thanks to Itamar
     https://stackoverflow.com/questions/7905380/testing-equivalence-of-xml-etree-elementtree
     """
+    if not e1:
+        if not e2:
+            return True
+        else:
+            return False
     if e1.tag != e2.tag:
         print('tag')
         print(e1)
         print(e2)
-        print(e1.tag + ' != ' + e2.tag)
+        print(str(e1.tag) + ' != ' + str(e2.tag))
         return False
     if e1.text != e2.text:
         print('text')
@@ -48,7 +53,7 @@ def tree_equal(e1, e2, send_map):
         print('tail')
         print(e1)
         print(e2)
-        print(e1.tail + ' != ' + e2.tail)
+        print(str(e1.tail) + ' != ' + str(e2.tail))
         return False
 
     copy_e1_attrib = e1.attrib.copy()
