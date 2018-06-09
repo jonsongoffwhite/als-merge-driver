@@ -11,9 +11,7 @@ class TreeEqualTestCase(unittest.TestCase):
 
     file_test_equal_1_A = 'test_data/test_equal_1_A.xml'
     file_test_equal_1_B = 'test_data/test_equal_1_B.xml'
-
-    def setUp(self):
-        pass
+    file_test_equal_2_A = 'test_data/test_equal_2_A.xml'
 
     def load_xml_string_from_file(self, filename):
         with open(filename, 'r') as f:
@@ -28,7 +26,12 @@ class TreeEqualTestCase(unittest.TestCase):
         self.assertTrue(equal.tree_equal(root_a, root_b, []))
 
     def test_semantically_different_xml_not_equal(self):
-        pass
+        str_a = self.load_xml_string_from_file(self.file_test_equal_2_A)
+        str_b = self.load_xml_string_from_file(self.file_test_equal_1_A)
+        root_a = ET.fromstring(str_a)
+        root_b = ET.fromstring(str_b)
+        self.assertNotEqual(root_a, root_b)
+        self.assertFalse(equal.tree_equal(root_a, root_b, []))
     
     def test_semantically_equal_xml_equal(self):
         str_a = self.load_xml_string_from_file(self.file_test_equal_1_A)
