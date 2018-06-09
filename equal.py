@@ -14,6 +14,8 @@ IGNORE_ATTRIB_FOR = {
     'VstPreset': ['Id'],
     'TrackSendHolder': ['Id'],
     'AutomationTarget': ['Id'],
+    'EffectiveName': ['Value'],
+    'RightTime': ['Value'],
 }
 
 IGNORE_ALWAYS = {
