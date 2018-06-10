@@ -16,6 +16,7 @@ IGNORE_ATTRIB_FOR = {
     'AutomationTarget': ['Id'],
     'EffectiveName': ['Value'],
     'RightTime': ['Value'],
+    'ModulationTarget': ['Id'],
 }
 
 IGNORE_ALWAYS = {
@@ -44,18 +45,6 @@ def tree_equal(e1, e2, send_map):
         print(e1)
         print(e2)
         print(str(e1.tag) + ' != ' + str(e2.tag))
-        return False
-    if e1.text != e2.text:
-        print('text')
-        print(e1)
-        print(e2)
-        print(str(e1.text) + ' != ' + str(e2.text))
-        return False
-    if e1.tail != e2.tail:
-        print('tail')
-        print(e1)
-        print(e2)
-        print(str(e1.tail) + ' != ' + str(e2.tail))
         return False
 
     copy_e1_attrib = e1.attrib.copy()

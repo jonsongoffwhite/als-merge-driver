@@ -98,13 +98,6 @@ class Version():
             self.tree.find('LiveSet').find('Tracks').remove(t.elem)
 
 
-        for track in our_added:
-            self.add_track(track)
-
-        for track in their_added:
-            self.add_track(track)
-
-
         # Get all of the return value mappings for each track in each version
         # Added can be ignored because they won't have any conflicting sends (they are new)
         # As can removed
@@ -119,6 +112,7 @@ class Version():
             updated_tracks = []
             for track in branch_same_tracks:
                 original_track = [t for t in base_tracks if t.track_id == track.track_id][0]
+                print("ORIGINAL ID: " + str(original_track.track_id))
                 # Create mapping of returns
                 # See note in equal.py for why this is necessary
                 branch_return = branch.get_return_tracks()
@@ -161,7 +155,15 @@ class Version():
                     
         for track in updates:
             print("REPLACING")
+            print(track.track_id)
             self.replace_track(track)
+
+        # Can safely add the tracks now
+        for track in our_added:
+            self.add_track(track)
+
+        for track in their_added:
+            self.add_track(track)
 
         
         ours.reconcile_send_values()
@@ -491,6 +493,43 @@ class Version():
     def return_track_count(self):
         return len([r for r in self.tracks if r.type == TrackType.RETURN])
 
+    def version_semantically_equal_to(self, other):
+        self_track_ids = [t.track_id for t in self.tracks]
+        other_track_ids = [t.track_id for t in other.tracks]
+
+        if len(self_track_ids) != len(other_track_ids):
+            return False
+
+        if set(self_track_ids) != set(other_track_ids):
+            return False
+
+        self_return = self.get_return_tracks()
+        other_return = other.get_return_tracks()
+
+        return_intersection_ids = [t.track_id for t in other_return if t.track_id in [b.track_id for b in self_return]]
+        # Get send ID mapping of these tracks to eachother
+        # Their send id is based on their ordering 
+        # The key will be the base send ID
+        # The value will be that send's ID in the branch track
+        send_map = {}
+        other_r_ids = [t.track_id for t in other_return]
+        self_r_ids = [t.track_id for t in self_return]
+        for i in return_intersection_ids:
+            br_loc = other_r_ids.index(i)
+            ba_loc = self_r_ids.index(i)
+            send_map[ba_loc] = br_loc
+
+        for track in self.tracks:
+            other_track = other.get_track_with_id(track.track_id)
+            if not tree_equal(track.elem, other_track.elem, send_map):
+                print(track)
+                print(other_track)
+                return False
+
+        return True
+        
+
+
 
 
 
@@ -530,6 +569,7 @@ class Track():
     # mapping of return track objects to values
     def set_return_map(self, mapping):
         self.return_map = mapping
+    
 
 
 class TrackType(Enum):
