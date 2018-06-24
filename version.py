@@ -112,7 +112,6 @@ class Version():
             updated_tracks = []
             for track in branch_same_tracks:
                 original_track = [t for t in base_tracks if t.track_id == track.track_id][0]
-                print("ORIGINAL ID: " + str(original_track.track_id))
                 # Create mapping of returns
                 # See note in equal.py for why this is necessary
                 branch_return = branch.get_return_tracks()
@@ -132,11 +131,8 @@ class Version():
 
                 if not tree_equal(track.elem, original_track.elem, send_map):
                     updated_tracks.append(track)
-                    print('not equal')
-                    print(track.elem)
                 else:
-                    print('equal')
-                    print(track.elem)
+                    pass
             return updated_tracks 
 
 
@@ -146,16 +142,12 @@ class Version():
 
         # Intersection of both of these
         conflicting_track_ids = [t.track_id for t in updated_in_ours if t.track_id in [h.track_id for h in updated_in_theirs]]
-        print([t for t in conflicting_track_ids])
         conflicts = [Conflict(*map(lambda x: ET.tostring(x.get_track_with_id(id_).elem).decode() , [self, ours, theirs])) for id_ in conflicting_track_ids] 
 
-        print(conflicts)
         updates = [t for t in updated_in_ours if t.track_id not in conflicting_track_ids]
         updates += [t for t in updated_in_theirs if t.track_id not in conflicting_track_ids]
                     
         for track in updates:
-            print("REPLACING")
-            print(track.track_id)
             self.replace_track(track)
 
         # Can safely add the tracks now
@@ -233,7 +225,6 @@ class Version():
             for cpath in conflict_files:
                 url_scheme += cpath + '+'
             url_scheme = url_scheme[:-1]
-            print(url_scheme)
             webbrowser.open(url_scheme)
 
             # Wait until the resolution file is present
@@ -254,8 +245,6 @@ class Version():
                 conf_branch_map = json.load(json_data)
                 for conf, branch in conf_branch_map.items():
                     # For each path: true/false ours/theirs
-                    print (conf)
-                    print(conflict_files)
                     # Get the index of the resolution from the original list of files
                     conf_i = conflict_files.index('.conftemp/'+conf)
                     # Get the Conflict object for this version 
@@ -365,16 +354,12 @@ class Version():
                 try:
                     value = track.return_map[rt.track_id]
                     new_mapping[rt.track_id] = value
-                    print('found existing send')
-                    print(value)
                 except KeyError:
                     # create a new entry with default
                     new_mapping[rt.track_id] = 0
-                    print('create zero send')
             #track.return_map = new_mapping
             track.final_ordered_mapping = [] 
             for rt in return_tracks:
-                print(new_mapping)
                 track.final_ordered_mapping.append(new_mapping[rt.track_id])
 
 
@@ -435,7 +420,6 @@ class Version():
                 check_ids(c)
 
         check_ids(self.tree)
-        print(len(duplicate_nodes))
 
         new_id = max(used_ids)
         for node in duplicate_nodes:
@@ -470,7 +454,6 @@ class Version():
         
         # Remove current sends
         for track in tracks:
-            print(track.final_ordered_mapping)
             track_sends = track.elem.find('DeviceChain').find('Mixer').find('Sends')
             old_sends = [sh for sh in track_sends]
             for sh in old_sends:
@@ -522,8 +505,6 @@ class Version():
         for track in self.tracks:
             other_track = other.get_track_with_id(track.track_id)
             if not tree_equal(track.elem, other_track.elem, send_map):
-                print(track)
-                print(other_track)
                 return False
 
         return True
@@ -550,7 +531,6 @@ class Track():
             int(send.attrib['Id']): float(send.find('Send').find('Manual').attrib['Value'])
                 for send in sends
         }
-        print(self.preliminary_return_map)
         self.return_map = None
 
         # The type of track

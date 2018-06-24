@@ -7,7 +7,7 @@ sys.path.append(CODE_DIR)
 
 from version import Version
 
-class VersionMethodTestCase(unittest.TestCase):
+class VersionTestCase(unittest.TestCase):
 
     file_test_version_1_A = "test_data/test_version_1_A.xml"
     file_test_version_2_A = "test_data/test_version_2_A.xml"
