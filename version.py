@@ -339,8 +339,6 @@ class Version():
     # All tracks must be added before calling
     #
     # Does not mutate ETree
-    # 
-    # Doesn't work properly
     def reconcile_send_values(self):
         # Get all return tracks
         return_tracks = [r for r in self.tracks if r.type == TrackType.RETURN]
