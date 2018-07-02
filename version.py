@@ -29,7 +29,6 @@ TRACK_SEND_HOLDER = """
         </TrackSendHolder>
 """
 
-#TRACK_SEND_HOLDER = """<TrackSendHolder Id="0"><Send><LomId Value="0" /><Manual Value="0.0003162277571" /><MidiControllerRange><Min Value="0.0003162277571" /><Max Value="1" /></MidiControllerRange><AutomationTarget Id="8631"><LockEnvelope Value="0" /></AutomationTarget><ModulationTarget Id="8632"><LockEnvelope Value="0" /></ModulationTarget></Send><Active Value="true" /></TrackSendHolder>"""
 
 COLLIDABLE_TAG = [
         "AutomationTarget",
@@ -316,15 +315,6 @@ class Version():
 
 
     def add_track(self, track):
-        if track.type == TrackType.RETURN:
-            # where in the order was it added?
-            # update values accordingly
-            # currently just add it last?
-            #new_send = ET.fromstring(TRACK_SEND_HOLDER)
-            #new_send.attrib['Id'] = str(len(self.return_track_count()))
-            #for track in self.tracks:
-            #    track.elem.find('DeviceChain').find('Mixer').find('Sends').append(new_send)
-            pass
 
         self.tracks.append(track)
         self.tree.find('LiveSet').find('Tracks').append(track.elem)
